@@ -29,6 +29,68 @@ Notifications.setNotificationHandler({
   }),
 })
 
+// Componente selector de emoji
+const EmojiPicker = ({ selectedEmoji, onEmojiSelect, visible, onClose }) => {
+  const emojis = [
+    '⏰',
+    '📝',
+    '💼',
+    '🏃‍♂️',
+    '🍎',
+    '📚',
+    '💻',
+    '🎯',
+    '☕',
+    '🚗',
+    '🏠',
+    '📞',
+    '💡',
+    '🎵',
+    '🛒',
+    '🧘‍♀️',
+    '🏋️‍♂️',
+    '🍳',
+    '🚿',
+    '📺',
+    '🎨',
+    '📖',
+    '🌅',
+    '🌙',
+  ]
+
+  return (
+    <Modal visible={visible} transparent animationType='slide'>
+      <View style={styles.emojiPickerOverlay}>
+        <View style={styles.emojiPickerModal}>
+          <View style={styles.emojiPickerHeader}>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.timePickerCancel}>Cancelar</Text>
+            </TouchableOpacity>
+            <Text style={styles.timePickerTitle}>Seleccionar Emoji</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.timePickerConfirm}>Listo</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.emojiGrid}>
+            {emojis.map((emoji, index) => (
+              <TouchableOpacity
+                key={index}
+                style={[
+                  styles.emojiButton,
+                  selectedEmoji === emoji && styles.emojiButtonSelected,
+                ]}
+                onPress={() => onEmojiSelect(emoji)}
+              >
+                <Text style={styles.emojiText}>{emoji}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
+  )
+}
+
 // Componente selector de hora
 const TimePicker = ({
   selectedHour,
@@ -41,7 +103,7 @@ const TimePicker = ({
   const [tempMinute, setTempMinute] = useState(selectedMinute)
 
   const hours = Array.from({ length: 24 }, (_, i) => i)
-  const minutes = Array.from({ length: 60 }, (_, i) => i) // Todos los minutos de 0 a 59
+  const minutes = Array.from({ length: 60 }, (_, i) => i)
 
   const confirmTime = () => {
     onTimeChange(tempHour, tempMinute)
@@ -135,11 +197,304 @@ const TimePicker = ({
   )
 }
 
+// Pantalla de selección de días
+const DaySelectionScreen = ({ visible, onClose, onDaySelect }) => {
+  const days = [
+    { key: 'monday', label: 'Lunes', emoji: '📅' },
+    { key: 'tuesday', label: 'Martes', emoji: '📅' },
+    { key: 'wednesday', label: 'Miércoles', emoji: '📅' },
+    { key: 'thursday', label: 'Jueves', emoji: '📅' },
+    { key: 'friday', label: 'Viernes', emoji: '📅' },
+    { key: 'saturday', label: 'Sábado', emoji: '📅' },
+    { key: 'sunday', label: 'Domingo', emoji: '📅' },
+    { key: 'everyday', label: 'Todos los días', emoji: '🔄' },
+  ]
+
+  return (
+    <Modal
+      visible={visible}
+      animationType='slide'
+      presentationStyle='pageSheet'
+    >
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={styles.cancelButton}>Cancelar</Text>
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>Crear Rutina</Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          <Text style={styles.daySelectionTitle}>
+            Selecciona el día para tu rutina:
+          </Text>
+
+          {days.map((day) => (
+            <TouchableOpacity
+              key={day.key}
+              style={styles.dayButton}
+              onPress={() => onDaySelect(day.key, day.label)}
+            >
+              <Text style={styles.dayButtonEmoji}>{day.emoji}</Text>
+              <Text style={styles.dayButtonText}>{day.label}</Text>
+              <Text style={styles.dayButtonArrow}>›</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  )
+}
+
+// Pantalla de rutina del día
+const DayRoutineScreen = ({
+  visible,
+  onClose,
+  dayKey,
+  dayLabel,
+  routines,
+  onAddRoutine,
+  onDeleteRoutine,
+}) => {
+  const [showReminderModal, setShowReminderModal] = useState(false)
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [showTimePicker, setShowTimePicker] = useState(false)
+  const [selectedHour, setSelectedHour] = useState(9)
+  const [selectedMinute, setSelectedMinute] = useState(0)
+  const [newReminder, setNewReminder] = useState({
+    emoji: '⏰',
+    title: '',
+    description: '',
+    time: '09:00',
+    hasNotification: true,
+  })
+
+  const dayRoutines = routines[dayKey] || []
+
+  const handleTimeChange = (hour, minute) => {
+    const timeString = `${hour.toString().padStart(2, '0')}:${minute
+      .toString()
+      .padStart(2, '0')}`
+    setSelectedHour(hour)
+    setSelectedMinute(minute)
+    setNewReminder({ ...newReminder, time: timeString })
+  }
+
+  const addReminder = () => {
+    if (!newReminder.title.trim()) {
+      Alert.alert('Error', 'Por favor ingresa un título para el recordatorio')
+      return
+    }
+
+    const reminderWithId = {
+      ...newReminder,
+      id: Date.now().toString(),
+    }
+
+    onAddRoutine(dayKey, reminderWithId)
+
+    // Reset form
+    setNewReminder({
+      emoji: '⏰',
+      title: '',
+      description: '',
+      time: '09:00',
+      hasNotification: true,
+    })
+    setSelectedHour(9)
+    setSelectedMinute(0)
+    setShowReminderModal(false)
+
+    Alert.alert('✅ Éxito', 'Recordatorio agregado a la rutina')
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      animationType='slide'
+      presentationStyle='pageSheet'
+    >
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={styles.cancelButton}>Atrás</Text>
+          </TouchableOpacity>
+          <Text style={styles.modalTitle}>{dayLabel}</Text>
+          <View style={{ width: 60 }} />
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          <TouchableOpacity
+            style={styles.addRoutineButton}
+            onPress={() => setShowReminderModal(true)}
+          >
+            <Text style={styles.addRoutineButtonText}>
+              + Agregar Recordatorio
+            </Text>
+          </TouchableOpacity>
+
+          {dayRoutines.length > 0 && (
+            <View style={styles.routinesContainer}>
+              <Text style={styles.routinesTitle}>Recordatorios:</Text>
+              {dayRoutines.map((routine) => (
+                <View key={routine.id} style={styles.routineCard}>
+                  <View style={styles.routineEmojiContainer}>
+                    <Text style={styles.routineEmoji}>{routine.emoji}</Text>
+                  </View>
+                  <View style={styles.routineContent}>
+                    <Text style={styles.routineTitle}>{routine.title}</Text>
+                    {routine.description && (
+                      <Text style={styles.routineDescription}>
+                        {routine.description}
+                      </Text>
+                    )}
+                  </View>
+                  <View style={styles.routineTimeContainer}>
+                    <Text style={styles.routineTime}>{routine.time}</Text>
+                    <TouchableOpacity
+                      style={styles.deleteRoutineButton}
+                      onPress={() => onDeleteRoutine(dayKey, routine.id)}
+                    >
+                      <Text style={styles.deleteRoutineButtonText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {dayRoutines.length === 0 && (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateEmoji}>📝</Text>
+              <Text style={styles.emptyStateText}>
+                No hay recordatorios para {dayLabel.toLowerCase()}
+              </Text>
+              <Text style={styles.emptyStateSubtext}>
+                Agrega tu primer recordatorio para comenzar
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+
+        {/* Modal para agregar recordatorio */}
+        <Modal
+          visible={showReminderModal}
+          animationType='slide'
+          presentationStyle='pageSheet'
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <TouchableOpacity onPress={() => setShowReminderModal(false)}>
+                <Text style={styles.cancelButton}>Cancelar</Text>
+              </TouchableOpacity>
+              <Text style={styles.modalTitle}>Nuevo Recordatorio</Text>
+              <TouchableOpacity onPress={addReminder}>
+                <Text style={styles.saveButton}>Guardar</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalContent}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Emoji</Text>
+                <TouchableOpacity
+                  style={styles.emojiSelectButton}
+                  onPress={() => setShowEmojiPicker(true)}
+                >
+                  <Text style={styles.emojiSelectButtonText}>
+                    {newReminder.emoji} Seleccionar emoji
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Título *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={newReminder.title}
+                  onChangeText={(text) =>
+                    setNewReminder({ ...newReminder, title: text })
+                  }
+                  placeholder='Ej: Hacer ejercicio'
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Descripción</Text>
+                <TextInput
+                  style={[styles.textInput, styles.textArea]}
+                  value={newReminder.description}
+                  onChangeText={(text) =>
+                    setNewReminder({ ...newReminder, description: text })
+                  }
+                  placeholder='Descripción adicional...'
+                  multiline
+                  numberOfLines={3}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Hora</Text>
+                <TouchableOpacity
+                  style={styles.timePickerButton}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={styles.timePickerButtonText}>
+                    🕐 {newReminder.time}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.switchContainer}>
+                <Text style={styles.switchLabel}>Activar notificación</Text>
+                <Switch
+                  value={newReminder.hasNotification}
+                  onValueChange={(value) =>
+                    setNewReminder({ ...newReminder, hasNotification: value })
+                  }
+                  trackColor={{ false: '#767577', true: '#81b0ff' }}
+                  thumbColor={
+                    newReminder.hasNotification ? '#2196F3' : '#f4f3f4'
+                  }
+                />
+              </View>
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
+
+        {/* Selector de emoji */}
+        <EmojiPicker
+          selectedEmoji={newReminder.emoji}
+          onEmojiSelect={(emoji) => setNewReminder({ ...newReminder, emoji })}
+          visible={showEmojiPicker}
+          onClose={() => setShowEmojiPicker(false)}
+        />
+
+        {/* Selector de hora */}
+        <TimePicker
+          selectedHour={selectedHour}
+          selectedMinute={selectedMinute}
+          onTimeChange={handleTimeChange}
+          visible={showTimePicker}
+          onClose={() => setShowTimePicker(false)}
+        />
+      </SafeAreaView>
+    </Modal>
+  )
+}
+
 export default function App() {
   const [selectedDate, setSelectedDate] = useState('')
   const [tasks, setTasks] = useState({})
+  const [routines, setRoutines] = useState({})
   const [showTaskModal, setShowTaskModal] = useState(false)
   const [showTimePicker, setShowTimePicker] = useState(false)
+  const [showDaySelection, setShowDaySelection] = useState(false)
+  const [showDayRoutine, setShowDayRoutine] = useState(false)
+  const [selectedRoutineDay, setSelectedRoutineDay] = useState({
+    key: '',
+    label: '',
+  })
   const [selectedHour, setSelectedHour] = useState(9)
   const [selectedMinute, setSelectedMinute] = useState(0)
   const [newTask, setNewTask] = useState({
@@ -160,7 +515,6 @@ export default function App() {
 
   const initializeApp = async () => {
     try {
-      // Solicitar permisos específicos para notificaciones
       const { status: existingStatus } =
         await Notifications.getPermissionsAsync()
       let finalStatus = existingStatus
@@ -178,7 +532,6 @@ export default function App() {
         )
       }
 
-      // Configurar canal de notificaciones para Android
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'Recordatorios Planify',
@@ -189,11 +542,12 @@ export default function App() {
         })
       }
 
-      // Cargar datos guardados
       await loadTasks()
+      await loadRoutines()
     } catch (error) {
       console.log('Error initializing app:', error)
       await loadTasks()
+      await loadRoutines()
     }
   }
 
@@ -208,12 +562,35 @@ export default function App() {
     }
   }
 
+  const loadRoutines = async () => {
+    try {
+      const savedRoutines = await AsyncStorage.getItem('planify_routines')
+      if (savedRoutines) {
+        setRoutines(JSON.parse(savedRoutines))
+      }
+    } catch (error) {
+      console.error('Error loading routines:', error)
+    }
+  }
+
   const saveTasks = async (newTasks) => {
     try {
       await AsyncStorage.setItem('planify_tasks', JSON.stringify(newTasks))
       setTasks(newTasks)
     } catch (error) {
       console.error('Error saving tasks:', error)
+    }
+  }
+
+  const saveRoutines = async (newRoutines) => {
+    try {
+      await AsyncStorage.setItem(
+        'planify_routines',
+        JSON.stringify(newRoutines)
+      )
+      setRoutines(newRoutines)
+    } catch (error) {
+      console.error('Error saving routines:', error)
     }
   }
 
@@ -236,8 +613,6 @@ export default function App() {
 
     try {
       const [hours, minutes] = task.time.split(':').map(Number)
-
-      // Crear fecha correctamente sin problemas de zona horaria
       const [year, month, day] = date.split('-').map(Number)
       const notificationDate = new Date(
         year,
@@ -251,21 +626,6 @@ export default function App() {
 
       const now = new Date()
 
-      console.log('=== DEBUG NOTIFICACIÓN ===')
-      console.log('Tarea:', task.title)
-      console.log('Hora seleccionada:', task.time)
-      console.log('Fecha seleccionada:', date)
-      console.log(
-        'Fecha de notificación:',
-        notificationDate.toLocaleString('es-ES')
-      )
-      console.log('Fecha actual:', now.toLocaleString('es-ES'))
-      console.log(
-        'Diferencia en minutos:',
-        (notificationDate.getTime() - now.getTime()) / (1000 * 60)
-      )
-
-      // Solo programar si la fecha es futura (con margen de 30 segundos para testing)
       if (notificationDate.getTime() > now.getTime() - 30000) {
         const notificationId = await Notifications.scheduleNotificationAsync({
           content: {
@@ -279,19 +639,10 @@ export default function App() {
           trigger: notificationDate,
         })
 
-        console.log('✅ Notificación programada con ID:', notificationId)
-        console.log('========================')
         return notificationId
-      } else {
-        console.log('❌ La fecha ya pasó, no se programa notificación')
-        console.log('========================')
       }
     } catch (error) {
       console.error('Error scheduling notification:', error)
-      Alert.alert(
-        'Error',
-        'No se pudo programar la notificación: ' + error.message
-      )
     }
   }
 
@@ -322,7 +673,6 @@ export default function App() {
 
     updatedTasks[selectedDate].push(taskWithId)
 
-    // Programar notificación si está habilitada
     if (taskWithId.hasNotification) {
       const notificationId = await scheduleNotification(
         taskWithId,
@@ -335,7 +685,6 @@ export default function App() {
 
     await saveTasks(updatedTasks)
 
-    // Resetear formulario
     setNewTask({
       title: '',
       time: '09:00',
@@ -357,7 +706,6 @@ export default function App() {
     const updatedTasks = { ...tasks }
     const taskToDelete = updatedTasks[date].find((task) => task.id === taskId)
 
-    // Cancelar notificación si existe
     if (taskToDelete && taskToDelete.notificationId) {
       try {
         await Notifications.cancelScheduledNotificationAsync(
@@ -377,14 +725,41 @@ export default function App() {
     await saveTasks(updatedTasks)
   }
 
+  const addRoutine = async (dayKey, routine) => {
+    const updatedRoutines = { ...routines }
+    if (!updatedRoutines[dayKey]) {
+      updatedRoutines[dayKey] = []
+    }
+    updatedRoutines[dayKey].push(routine)
+    await saveRoutines(updatedRoutines)
+  }
+
+  const deleteRoutine = async (dayKey, routineId) => {
+    const updatedRoutines = { ...routines }
+    if (updatedRoutines[dayKey]) {
+      updatedRoutines[dayKey] = updatedRoutines[dayKey].filter(
+        (routine) => routine.id !== routineId
+      )
+      if (updatedRoutines[dayKey].length === 0) {
+        delete updatedRoutines[dayKey]
+      }
+      await saveRoutines(updatedRoutines)
+    }
+  }
+
+  const handleDaySelect = (dayKey, dayLabel) => {
+    setSelectedRoutineDay({ key: dayKey, label: dayLabel })
+    setShowDaySelection(false)
+    setShowDayRoutine(true)
+  }
+
   const onDayPress = (day) => {
     setSelectedDate(day.dateString)
   }
 
   const formatDate = (dateString) => {
-    // Crear fecha sin problemas de zona horaria
     const [year, month, day] = dateString.split('-').map(Number)
-    const date = new Date(year, month - 1, day) // month - 1 porque los meses van de 0-11
+    const date = new Date(year, month - 1, day)
 
     return date.toLocaleDateString('es-ES', {
       weekday: 'long',
@@ -404,6 +779,15 @@ export default function App() {
       </View>
 
       <ScrollView style={styles.scrollView}>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.routineButton}
+            onPress={() => setShowDaySelection(true)}
+          >
+            <Text style={styles.routineButtonText}>🔄 Crear Rutina</Text>
+          </TouchableOpacity>
+        </View>
+
         <Calendar
           onDayPress={onDayPress}
           markedDates={{
@@ -556,6 +940,24 @@ export default function App() {
         visible={showTimePicker}
         onClose={() => setShowTimePicker(false)}
       />
+
+      {/* Pantalla de selección de días */}
+      <DaySelectionScreen
+        visible={showDaySelection}
+        onClose={() => setShowDaySelection(false)}
+        onDaySelect={handleDaySelect}
+      />
+
+      {/* Pantalla de rutina del día */}
+      <DayRoutineScreen
+        visible={showDayRoutine}
+        onClose={() => setShowDayRoutine(false)}
+        dayKey={selectedRoutineDay.key}
+        dayLabel={selectedRoutineDay.label}
+        routines={routines}
+        onAddRoutine={addRoutine}
+        onDeleteRoutine={deleteRoutine}
+      />
     </SafeAreaView>
   )
 }
@@ -585,6 +987,22 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  buttonContainer: {
+    padding: 20,
+    paddingBottom: 10,
+  },
+  routineButton: {
+    backgroundColor: '#9C27B0',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  routineButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   selectedDateSection: {
     padding: 20,
@@ -837,5 +1255,195 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
     marginHorizontal: 20,
+  },
+  // Estilos para la selección de días
+  daySelectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  dayButton: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  dayButtonEmoji: {
+    fontSize: 24,
+    marginRight: 15,
+  },
+  dayButtonText: {
+    flex: 1,
+    fontSize: 18,
+    color: '#333',
+    fontWeight: '500',
+  },
+  dayButtonArrow: {
+    fontSize: 24,
+    color: '#ccc',
+  },
+  // Estilos para rutinas del día
+  addRoutineButton: {
+    backgroundColor: '#FF9800',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  addRoutineButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  routinesContainer: {
+    marginTop: 10,
+  },
+  routinesTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 15,
+  },
+  routineCard: {
+    backgroundColor: 'white',
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  routineEmojiContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#f0f0f0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  routineEmoji: {
+    fontSize: 24,
+  },
+  routineContent: {
+    flex: 1,
+  },
+  routineTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  routineDescription: {
+    fontSize: 14,
+    color: '#666',
+  },
+  routineTimeContainer: {
+    alignItems: 'center',
+  },
+  routineTime: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    marginBottom: 8,
+  },
+  deleteRoutineButton: {
+    backgroundColor: '#f44336',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteRoutineButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  emptyState: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyStateEmoji: {
+    fontSize: 48,
+    marginBottom: 15,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    color: '#333',
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+  },
+  // Estilos para selector de emoji
+  emojiPickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emojiPickerModal: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    width: '90%',
+    maxHeight: '70%',
+  },
+  emojiPickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  emojiGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    padding: 20,
+    justifyContent: 'space-around',
+  },
+  emojiButton: {
+    width: 50,
+    height: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 25,
+    margin: 5,
+  },
+  emojiButtonSelected: {
+    backgroundColor: '#e3f2fd',
+  },
+  emojiText: {
+    fontSize: 24,
+  },
+  emojiSelectButton: {
+    backgroundColor: '#f8f8f8',
+    padding: 15,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    alignItems: 'center',
+  },
+  emojiSelectButtonText: {
+    fontSize: 16,
+    color: '#333',
   },
 })
