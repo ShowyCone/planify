@@ -20,7 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.showycode.planify"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -28,6 +29,13 @@
     "plugins": [
       "expo-router",
       "expo-sqlite"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0c7ca8a6-2932-46c9-ba87-0b2b20c5995b"
+      }
+    },
+    "owner": "showycode"
   }
 }
